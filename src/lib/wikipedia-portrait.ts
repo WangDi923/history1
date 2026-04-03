@@ -12,6 +12,12 @@ type SearchResult = {
   pageid?: number;
 };
 
+function buildFallbackPortraitDataUrl(figureName: string) {
+  const label = (figureName || "历史人物").slice(0, 4);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f4ebe1"/><stop offset="100%" stop-color="#dcc3aa"/></linearGradient></defs><rect width="512" height="512" fill="url(#g)"/><circle cx="256" cy="190" r="92" fill="#8b2626" fill-opacity="0.15"/><path d="M104 430c18-76 84-128 152-128s134 52 152 128" fill="#8b2626" fill-opacity="0.15"/><text x="256" y="468" text-anchor="middle" font-family="serif" font-size="44" fill="#6a1d1d">${label}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 function pickImageFromPages(pages: Record<string, WikiPage>): {
   imageUrl: string | null;
   title?: string;
@@ -38,7 +44,13 @@ async function searchAndFetchPortrait(figureName: string, language: "zh" | "en")
     `https://${domain}/w/api.php?action=query&format=json&origin=*` +
     `&list=search&srsearch=${encoded}&srlimit=5&srnamespace=0`;
 
-  const searchRes = await fetch(searchUrl, { cache: "no-store" });
+  let searchRes: Response;
+  try {
+    searchRes = await fetch(searchUrl, { cache: "no-store" });
+  } catch {
+    return { imageUrl: null, matchedTitle: figureName };
+  }
+
   if (!searchRes.ok) {
     return { imageUrl: null, matchedTitle: figureName };
   }
@@ -63,7 +75,13 @@ async function searchAndFetchPortrait(figureName: string, language: "zh" | "en")
       `&prop=pageimages|extracts&piprop=original|thumbnail&pithumbsize=800` +
       `&exintro=1&explaintext=1&titles=${imageUrl}`;
 
-    const infoRes = await fetch(infoUrl, { cache: "no-store" });
+    let infoRes: Response;
+    try {
+      infoRes = await fetch(infoUrl, { cache: "no-store" });
+    } catch {
+      continue;
+    }
+
     if (!infoRes.ok) continue;
 
     const infoData = (await infoRes.json()) as {
@@ -84,29 +102,33 @@ async function searchAndFetchPortrait(figureName: string, language: "zh" | "en")
 }
 
 export async function fetchPortraitFromWiki(figureName: string) {
-  // 1) 优先中文维基
-  const zhResult = await searchAndFetchPortrait(figureName, "zh");
-  if (zhResult.imageUrl) {
-    return {
-      imageUrl: zhResult.imageUrl,
-      matchedTitle: zhResult.matchedTitle,
-      source: "wikipedia-zh",
-    };
-  }
+  try {
+    // 1) 优先中文维基
+    const zhResult = await searchAndFetchPortrait(figureName, "zh");
+    if (zhResult.imageUrl) {
+      return {
+        imageUrl: zhResult.imageUrl,
+        matchedTitle: zhResult.matchedTitle,
+        source: "wikipedia-zh",
+      };
+    }
 
-  // 2) 回退英文维基
-  const enResult = await searchAndFetchPortrait(figureName, "en");
-  if (enResult.imageUrl) {
-    return {
-      imageUrl: enResult.imageUrl,
-      matchedTitle: enResult.matchedTitle,
-      source: "wikipedia-en",
-    };
+    // 2) 回退英文维基
+    const enResult = await searchAndFetchPortrait(figureName, "en");
+    if (enResult.imageUrl) {
+      return {
+        imageUrl: enResult.imageUrl,
+        matchedTitle: enResult.matchedTitle,
+        source: "wikipedia-en",
+      };
+    }
+  } catch {
+    // Ignore and fall back to generated portrait below.
   }
 
   return {
-    imageUrl: null,
+    imageUrl: buildFallbackPortraitDataUrl(figureName),
     matchedTitle: figureName,
-    source: null,
+    source: "generated-fallback",
   };
 }
