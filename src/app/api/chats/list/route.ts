@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { fetchPortraitFromWiki } from "@/lib/wikipedia-portrait";
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,23 +59,9 @@ export async function POST(request: NextRequest) {
     // Generate image if requested
     if (generateImage) {
       try {
-        const imageResponse = await fetch(
-          "http://localhost:3000/api/figures/fetch-portrait",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              figureName,
-              figureDescription,
-            }),
-          }
-        );
-
-        if (imageResponse.ok) {
-          const imageData = await imageResponse.json();
-          figureImageUrl = imageData.imageUrl;
+        const result = await fetchPortraitFromWiki(figureName);
+        if (result.imageUrl) {
+          figureImageUrl = result.imageUrl;
         }
       } catch (err) {
         console.error("Image generation failed:", err);
