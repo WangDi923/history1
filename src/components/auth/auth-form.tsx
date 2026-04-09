@@ -42,14 +42,17 @@ export function AuthForm({ mode }: AuthFormProps) {
           try {
             await createUserProfile(authData.user.id, fullName, school);
           } catch (profileErr) {
-            setError(profileErr instanceof Error ? profileErr.message : "创建档案失败");
-            return;
+            console.error("注册后创建档案失败:", profileErr);
           }
         }
 
-        setError("注册成功！请检查您的邮箱确认账户。");
+        const registerSuccessMessage = authData.session
+          ? "注册成功！正在跳转到仪表盘..."
+          : "注册成功！请检查您的邮箱确认账户。";
+
+        setError(registerSuccessMessage);
         setTimeout(() => {
-          router.push("/auth/login");
+          router.push(authData.session ? "/dashboard" : "/auth/login");
         }, 2000);
       } else {
         // 登录流程
