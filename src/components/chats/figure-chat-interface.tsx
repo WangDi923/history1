@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, Trash2 } from "lucide-react";
+import { Send, Loader2, Trash2, Download, ChevronDown } from "lucide-react";
 
 interface Message {
   id?: string;
@@ -29,6 +29,7 @@ export default function FigureChatsComponent({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openExportMenu, setOpenExportMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -38,6 +39,85 @@ export default function FigureChatsComponent({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    setMessages(initialMessages);
+  }, [chatId, initialMessages]);
+
+  const sanitizeFileName = (name: string) => {
+    return name
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .replace(/\s+/g, "_")
+      .slice(0, 80);
+  };
+
+  const formatMessageTime = (createdAt?: string) => {
+    if (!createdAt) return "";
+    return new Date(createdAt).toLocaleString("zh-CN");
+  };
+
+  const buildExportContent = (format: "md" | "txt") => {
+    const exportDate = new Date().toLocaleString("zh-CN");
+    const title = `与${figureName}的对话`;
+    const header =
+      format === "md"
+        ? [
+            `# ${title}`,
+            "",
+            `- 导出时间: ${exportDate}`,
+            `- 消息数量: ${messages.length}`,
+            "",
+            "---",
+            "",
+          ]
+        : [
+            title,
+            "",
+            `导出时间: ${exportDate}`,
+            `消息数量: ${messages.length}`,
+            "",
+            "================================",
+            "",
+          ];
+
+    const body = messages.flatMap((message) => {
+      const roleLabel = message.role === "user" ? "用户" : figureName;
+      const timeLabel = formatMessageTime(message.created_at);
+
+      if (format === "md") {
+        return [
+          `## ${roleLabel}`,
+          timeLabel ? `- 时间: ${timeLabel}` : "",
+          "",
+          message.content,
+          "",
+        ].filter(Boolean);
+      }
+
+      return [
+        `【${roleLabel}】${timeLabel ? ` ${timeLabel}` : ""}`,
+        message.content,
+        "",
+      ];
+    });
+
+    return [...header, ...body].join("\n");
+  };
+
+  const handleExportChat = (format: "md" | "txt") => {
+    const fileContent = buildExportContent(format);
+    const mimeType = format === "md" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8";
+    const blob = new Blob([fileContent], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${sanitizeFileName(`与${figureName}的对话`)}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setOpenExportMenu(false);
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -132,13 +212,44 @@ export default function FigureChatsComponent({
             <p className="text-stone-600 font-medium text-sm sm:text-base mt-2 ml-5">昔日重现，跨世对谈</p>
           </div>
         </div>
-        <button
-          onClick={handleDeleteChat}
-          className="p-2 text-stone-500 hover:text-[#8b2626] hover:bg-[#fbf8f1] rounded transition flex-shrink-0 z-10 border border-transparent hover:border-[#d4c4b7]"
-          title="焚毁绝卷"
-        >
-          <Trash2 size={20} />
-        </button>
+        <div className="flex items-center gap-2 shrink-0 z-10">
+          <div className="relative">
+            <button
+              onClick={() => setOpenExportMenu(!openExportMenu)}
+              className="p-2 text-stone-500 hover:text-[#8b2626] hover:bg-[#fbf8f1] rounded transition border border-transparent hover:border-[#d4c4b7] flex items-center gap-1"
+              title="导出对话"
+            >
+              <Download size={20} />
+              <ChevronDown size={14} className={`transition-transform ${openExportMenu ? "rotate-180" : ""}`} />
+            </button>
+            {openExportMenu && (
+              <div className="fixed inset-0 z-10" onClick={() => setOpenExportMenu(false)} />
+            )}
+            {openExportMenu && (
+              <div className="absolute right-0 top-full mt-2 bg-[#fbf8f1] border border-[#d4c4b7] rounded shadow-lg z-20 min-w-max overflow-hidden">
+                <button
+                  onClick={() => handleExportChat("md")}
+                  className="block w-full px-4 py-2 text-sm text-left text-stone-700 hover:bg-[#f4ebe1] transition-colors whitespace-nowrap"
+                >
+                  导出为 .md
+                </button>
+                <button
+                  onClick={() => handleExportChat("txt")}
+                  className="block w-full px-4 py-2 text-sm text-left text-stone-700 hover:bg-[#f4ebe1] transition-colors border-t border-[#d4c4b7] whitespace-nowrap"
+                >
+                  导出为 .txt
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleDeleteChat}
+            className="p-2 text-stone-500 hover:text-[#8b2626] hover:bg-[#fbf8f1] rounded transition flex-shrink-0 border border-transparent hover:border-[#d4c4b7]"
+            title="焚毁绝卷"
+          >
+            <Trash2 size={20} />
+          </button>
+        </div>
       </div>
 
       {/* 消息区域 */}
