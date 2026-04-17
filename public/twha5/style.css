@@ -135,10 +135,11 @@ img {
 }
 .person {
 	height: 64px;
+	cursor: pointer;
 }
 .person div {
 	padding: 3px 4px 0 52px;
-    cursor: default;
+	cursor: pointer;
 }
 .person img {
 	float: left;

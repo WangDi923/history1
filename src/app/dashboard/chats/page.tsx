@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { redirect } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import FigureSelector from "@/components/chats/figure-selector";
 import FigureChatsComponent from "@/components/chats/figure-chat-interface";
 import CustomFigureInput from "@/components/chats/custom-figure-input";
@@ -26,7 +24,6 @@ interface Chat {
 }
 
 export default function ChatsPage() {
-  const router = useRouter();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedFigure, setSelectedFigure] = useState<string | null>(null);
   const [selectedFigureImage, setSelectedFigureImage] = useState<string | null>(null);
@@ -36,16 +33,25 @@ export default function ChatsPage() {
   const [userChats, setUserChats] = useState<Chat[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "preset" | "custom">("list");
   const [fromLibrary, setFromLibrary] = useState(false);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
+    // Use ref to prevent double-initialization in React 18 strict mode
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     fetchUserChats();
     
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlId = params.get('id');
+      const figure = params.get('figure');
       if (urlId) {
         setFromLibrary(true);
         handleLoadChat(urlId);
+      } else if (figure) {
+        setFromLibrary(false);
+        handleSelectFigure(figure);
       }
     }
   }, []);

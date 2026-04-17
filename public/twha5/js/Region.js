@@ -14,6 +14,25 @@ function Region(a)
 	this.pos_y = 0;
 	this.disp_level = 0;
 
+	function openFigureChat(figureName)
+	{
+		if (!figureName) {
+			return;
+		}
+
+		const payload = {
+			type: 'open-figure-chat',
+			figureName: figureName,
+		};
+
+		if (window.parent && window.parent !== window) {
+			window.parent.postMessage(payload, window.location.origin);
+			return;
+		}
+
+		window.location.href = '/dashboard/chats?figure=' + encodeURIComponent(figureName);
+	}
+
 	function create_region_box()
 	{
 		let node = document.createElement('div');
@@ -147,6 +166,12 @@ function Region(a)
 				}
 				html += '<div>' + a_title[lang] + '</div><div>' + a_person[3 + lang] + '</div>';
 				item.innerHTML = html;
+				item.addEventListener('click', function(e)
+				{
+					e.preventDefault();
+					e.stopPropagation();
+					openFigureChat(a_person[5]);
+				});
 				body.appendChild(item);
 			}
 		} else {

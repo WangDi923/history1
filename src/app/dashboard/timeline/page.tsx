@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import Link from "next/link";
+import TimelineMapEmbed from "@/components/timeline/timeline-map-embed";
 
 export default async function TimelinePage() {
   const supabase = await createClient();
@@ -68,11 +69,7 @@ export default async function TimelinePage() {
 
           <div className="rounded border-2 border-[#8b2626]/20 bg-[#f4ebe1]/50 shadow-[0_8px_30px_rgba(0,0,0,0.1)] p-2">
             <div className="rounded border border-[#8b2626]/10 overflow-hidden relative">
-              <iframe
-                src="/twha5/index.html"
-                title="万国坤舆图鉴"
-                className="h-[78vh] min-h-[620px] w-full bg-white"
-              />
+              <TimelineMapEmbed />
             </div>
           </div>
 
